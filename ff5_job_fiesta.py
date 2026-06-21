@@ -2,7 +2,7 @@ import random
 
 CRYSTALS = {
     "Wind": ["Knight", "Monk", "Thief", "White Mage", "Black Mage", "Blue Mage"],
-    "Water": ["Berserker", "Mystic Knight", "Time Mage", "Summoner", "Red Mage", "Mime"],
+    "Water": ["Berserker", "Mystic Knight", "Time Mage", "Summoner", "Red Mage"],
     "Fire": ["Geomancer", "Beastmaster", "Ninja", "Bard", "Ranger"],
     "Earth": ["Samurai", "Dancer", "Dragoon", "Chemist"],
 }
