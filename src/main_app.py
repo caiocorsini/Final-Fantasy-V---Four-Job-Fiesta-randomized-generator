@@ -22,6 +22,7 @@ class FF5JobFiestaApp(tk.Tk):
         self.cards: dict[str, CharacterCard] = {}
         self.galuf_is_krile = False
         self.fullscreen_button: tk.Button | None = None
+        self.current_assignments: dict[str, dict[str, str]] = {}
 
         self._build_header()
         self._build_character_grid()
@@ -64,6 +65,8 @@ class FF5JobFiestaApp(tk.Tk):
                 row=index // 2,
                 column=index % 2,
                 on_toggle_sprite=on_toggle,
+                crystal_jobs=CRYSTALS,
+                on_job_changed=self._on_job_manually_changed,
             )
             self.cards[character] = card
 
@@ -190,6 +193,12 @@ class FF5JobFiestaApp(tk.Tk):
             button_text = "Krile" if self.galuf_is_krile else "Galuf"
             card.update_sprite(ASSETS_DIR / sprite_file, button_text)
 
+    def _on_job_manually_changed(self, character: str, crystal: str, new_job: str) -> None:
+        """Handle manual job changes from clicking on job labels."""
+        if character not in self.current_assignments:
+            self.current_assignments[character] = {}
+        self.current_assignments[character][crystal] = new_job
+
     def copy_seed_to_clipboard(self) -> None:
         seed_text = self.seed_info_label.cget("text")
         if seed_text.startswith("Share this seed:"):
@@ -219,6 +228,9 @@ class FF5JobFiestaApp(tk.Tk):
             allow_same_crystal_job=allow_same_crystal_job,
             include_previous_crystals=include_previous_crystals,
         )
+
+        # Store current assignments for manual job changes
+        self.current_assignments = {char: assign.copy() for char, assign in assignments.items()}
 
         for character, card in self.cards.items():
             card.update_jobs(assignments[character])

@@ -1,6 +1,6 @@
 import tkinter as tk
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 
 class CharacterCard:
@@ -12,12 +12,18 @@ class CharacterCard:
         row: int,
         column: int,
         on_toggle_sprite: Callable[[], None] | None = None,
+        crystal_jobs: dict[str, list[str]] | None = None,
+        on_job_changed: Callable[[str, str, str], None] | None = None,
     ) -> None:
         self.character = character
         self.sprite_path = sprite_path
         self.on_toggle_sprite = on_toggle_sprite
+        self.on_job_changed = on_job_changed
+        self.crystal_jobs = crystal_jobs or {}
         self.image = self._load_image(self.sprite_path)
         self.job_labels: list[tk.Label] = []
+        self.current_assignments: dict[str, str] = {}
+        self.crystals = ["Wind", "Water", "Fire", "Earth"]
 
         self.frame = tk.Frame(
             parent,
@@ -69,7 +75,7 @@ class CharacterCard:
         )
         name_label.pack(pady=(0, 6))
 
-        for crystal in ["Wind", "Water", "Fire", "Earth"]:
+        for crystal_index, crystal in enumerate(self.crystals):
             row_frame = tk.Frame(self.frame, bg="#1f305a")
             row_frame.pack(fill="x", pady=4)
 
@@ -94,6 +100,9 @@ class CharacterCard:
                 width=13,
             )
             job_label.pack(side="left", fill="x", expand=True)
+            # Make the label clickable
+            job_label.bind("<Button-1>", lambda event, idx=crystal_index: self._on_job_clicked(idx))
+            job_label.config(cursor="hand2")
             self.job_labels.append(job_label)
 
     def _load_image(self, path: Path) -> tk.PhotoImage:
@@ -103,8 +112,36 @@ class CharacterCard:
         return image
 
     def update_jobs(self, assignments: dict[str, str]) -> None:
+        self.current_assignments = assignments.copy()
         for label, job in zip(self.job_labels, assignments.values()):
             label.config(text=job)
+
+    def _on_job_clicked(self, crystal_index: int) -> None:
+        """Handle job label clicks to cycle through available jobs."""
+        crystal = self.crystals[crystal_index]
+        available_jobs = self.crystal_jobs.get(crystal, [])
+        
+        if not available_jobs:
+            return
+        
+        current_job = self.current_assignments.get(crystal, "-")
+        
+        # Find the next job in the list
+        if current_job in available_jobs:
+            current_idx = available_jobs.index(current_job)
+            next_idx = (current_idx + 1) % len(available_jobs)
+        else:
+            next_idx = 0
+        
+        new_job = available_jobs[next_idx]
+        
+        # Update the label
+        self.job_labels[crystal_index].config(text=new_job)
+        self.current_assignments[crystal] = new_job
+        
+        # Notify the main app if callback is provided
+        if self.on_job_changed:
+            self.on_job_changed(self.character, crystal, new_job)
 
     def update_sprite(self, path: Path, button_text: str) -> None:
         self.image = self._load_image(path)
