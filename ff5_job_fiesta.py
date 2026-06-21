@@ -19,32 +19,235 @@ SPRITES = {
 }
 
 
-def randomize_jobs(
-    seed: int | None = None,
-    exclude_berserker: bool = False,
-    allow_same_crystal_job: bool = False,
-    include_previous_crystals: bool = False,
-) -> dict:
-    if seed is not None:
-        random.seed(seed)
+class JobRandomizer:
+    def __init__(self, crystals: dict[str, list[str]], characters: list[str]) -> None:
+        self.crystals = crystals
+        self.characters = characters
 
-    result = {character: {} for character in CHARACTERS}
-    crystal_names = list(CRYSTALS.keys())
-    for crystal_index, crystal in enumerate(crystal_names):
-        jobs = CRYSTALS[crystal]
-        if include_previous_crystals and crystal_index > 0:
-            previous_jobs = [job for previous_crystal in crystal_names[:crystal_index] for job in CRYSTALS[previous_crystal]]
-            jobs = previous_jobs + jobs
+    def randomize(
+        self,
+        seed: int | None = None,
+        exclude_berserker: bool = False,
+        allow_same_crystal_job: bool = False,
+        include_previous_crystals: bool = False,
+    ) -> dict:
+        if seed is not None:
+            random.seed(seed)
 
-        available_jobs = [job for job in jobs if not (exclude_berserker and job == "Berserker")]
-        if allow_same_crystal_job:
-            assignments = [random.choice(available_jobs) for _ in CHARACTERS]
-        else:
-            assignments = random.sample(available_jobs, k=4)
+        result = {character: {} for character in self.characters}
+        crystal_names = list(self.crystals.keys())
 
-        for character, job in zip(CHARACTERS, assignments):
-            result[character][crystal] = job
-    return result
+        for crystal_index, crystal in enumerate(crystal_names):
+            jobs = self.crystals[crystal]
+            if include_previous_crystals and crystal_index > 0:
+                previous_jobs = [
+                    job
+                    for previous_crystal in crystal_names[:crystal_index]
+                    for job in self.crystals[previous_crystal]
+                ]
+                jobs = previous_jobs + jobs
+
+            available_jobs = [
+                job for job in jobs if not (exclude_berserker and job == "Berserker")
+            ]
+            if allow_same_crystal_job:
+                assignments = [random.choice(available_jobs) for _ in self.characters]
+            else:
+                assignments = random.sample(available_jobs, k=len(self.characters))
+
+            for character, job in zip(self.characters, assignments):
+                result[character][crystal] = job
+
+        return result
+
+
+class OptionsPanel:
+    def __init__(self, parent: tk.Widget) -> None:
+        self.options_open = False
+        self.exclude_berserker_var = tk.BooleanVar(value=False)
+        self.allow_same_crystal_job_var = tk.BooleanVar(value=False)
+        self.include_previous_crystals_var = tk.BooleanVar(value=False)
+
+        self.frame = tk.Frame(parent, bg="#121b35", bd=1, relief="solid")
+        self.frame.place_forget()
+        self._build_panel()
+
+    def _build_panel(self) -> None:
+        title = tk.Label(
+            self.frame,
+            text="Options",
+            fg="#edf2ff",
+            bg="#121b35",
+            font=("Segoe UI", 12, "bold"),
+        )
+        title.pack(padx=12, pady=(12, 6), anchor="w")
+
+        self._build_checkbutton(
+            "Exclude Berserker", self.exclude_berserker_var
+        )
+        self._build_checkbutton(
+            "Allow same job in same crystal", self.allow_same_crystal_job_var
+        )
+        self._build_checkbutton(
+            "Include previous crystal jobs", self.include_previous_crystals_var
+        )
+
+        close_button = tk.Button(
+            self.frame,
+            text="Close",
+            command=self.toggle,
+            bg="#5fc5ff",
+            fg="#081222",
+            relief="flat",
+            padx=10,
+            pady=6,
+            font=("Segoe UI", 10, "bold"),
+        )
+        close_button.pack(padx=12, pady=(10, 12), anchor="e")
+
+    def _build_checkbutton(
+        self, label: str, variable: tk.BooleanVar
+    ) -> None:
+        check = tk.Checkbutton(
+            self.frame,
+            text=label,
+            variable=variable,
+            fg="#edf2ff",
+            bg="#121b35",
+            selectcolor="#121b35",
+            activebackground="#121b35",
+            activeforeground="#edf2ff",
+            font=("Segoe UI", 10),
+            bd=0,
+            highlightthickness=0,
+            anchor="w",
+        )
+        check.pack(fill="x", padx=12, pady=4)
+
+    def toggle(self) -> None:
+        if self.options_open:
+            self.frame.place_forget()
+            self.options_open = False
+            return
+
+        self.frame.place(relx=1.0, rely=0.0, x=-16, y=56, anchor="ne", width=260)
+        self.options_open = True
+
+    def get_settings(self) -> tuple[bool, bool, bool]:
+        return (
+            self.exclude_berserker_var.get(),
+            self.allow_same_crystal_job_var.get(),
+            self.include_previous_crystals_var.get(),
+        )
+
+
+class CharacterCard:
+    def __init__(
+        self,
+        parent: tk.Widget,
+        character: str,
+        sprite_path: str,
+        row: int,
+        column: int,
+        on_toggle_sprite: None | callable = None,
+    ) -> None:
+        self.character = character
+        self.sprite_path = Path(__file__).parent / sprite_path
+        self.on_toggle_sprite = on_toggle_sprite
+        self.image = self._load_image(self.sprite_path)
+        self.job_labels: list[tk.Label] = []
+        self.sprite_button: tk.Button | None = None
+
+        self.frame = tk.Frame(
+            parent,
+            bg="#18254c",
+            bd=0,
+            relief="flat",
+            padx=12,
+            pady=12,
+            width=340,
+            height=320,
+        )
+        self.frame.grid(row=row, column=column, padx=12, pady=12, sticky="nsew")
+        self.frame.grid_propagate(False)
+        self._build_card()
+
+    def _build_card(self) -> None:
+        sprite_container = tk.Frame(self.frame, bg="#18254c")
+        sprite_container.pack(pady=(0, 10), fill="x")
+
+        self.sprite_label = tk.Label(
+            sprite_container, image=self.image, bg="#18254c"
+        )
+        self.sprite_label.image = self.image
+        self.sprite_label.pack()
+
+        if self.on_toggle_sprite:
+            self.sprite_button = tk.Button(
+                sprite_container,
+                text="Galuf",
+                command=self.on_toggle_sprite,
+                bg="#5fc5ff",
+                fg="#081222",
+                activebackground="#7fd4ff",
+                relief="flat",
+                width=5,
+                height=1,
+                font=("Segoe UI", 7, "bold"),
+            )
+            self.sprite_button.place(relx=0.0, rely=0.0, x=4, y=4)
+
+        name_label = tk.Label(
+            self.frame,
+            text=self.character,
+            fg="#ffffff",
+            bg="#18254c",
+            font=("Segoe UI", 14, "bold"),
+        )
+        name_label.pack(pady=(0, 6))
+
+        for crystal in CRYSTALS:
+            row = tk.Frame(self.frame, bg="#1f305a")
+            row.pack(fill="x", pady=4)
+
+            crystal_label = tk.Label(
+                row,
+                text=f"{crystal}:",
+                fg="#a7b8dc",
+                bg="#1f305a",
+                font=("Segoe UI", 9, "bold"),
+                width=10,
+                anchor="w",
+            )
+            crystal_label.pack(side="left")
+
+            label = tk.Label(
+                row,
+                text="-",
+                fg="#edf2ff",
+                bg="#1f305a",
+                font=("Segoe UI", 10),
+                anchor="w",
+                width=13,
+            )
+            label.pack(side="left", fill="x", expand=True)
+            self.job_labels.append(label)
+
+    def _load_image(self, path: Path) -> tk.PhotoImage:
+        if not path.exists():
+            raise FileNotFoundError(f"Sprite not found: {path}")
+        return tk.PhotoImage(file=str(path))
+
+    def update_jobs(self, assignments: dict[str, str]) -> None:
+        for label, (crystal, job) in zip(self.job_labels, assignments.items()):
+            label.config(text=job)
+
+    def update_sprite(self, path: Path, button_text: str) -> None:
+        self.image = self._load_image(path)
+        self.sprite_label.configure(image=self.image)
+        self.sprite_label.image = self.image
+        if self.sprite_button:
+            self.sprite_button.configure(text=button_text)
 
 
 class FF5JobFiestaApp(tk.Tk):
@@ -52,16 +255,14 @@ class FF5JobFiestaApp(tk.Tk):
         super().__init__()
         self.title("FF5 4 Job Fiesta Randomizer")
         self.configure(bg="#0f162c")
-        self.geometry("720x680")
-        self.minsize(720, 620)
+        self.geometry("720x620")
+        self.minsize(720, 580)
         self.resizable(False, False)
 
-        self.images: dict[str, tk.PhotoImage] = {}
-        self.sprite_labels: dict[str, tk.Label] = {}
-        self.job_labels: dict[str, list[tk.Label]] = {}
+        self.randomizer = JobRandomizer(CRYSTALS, CHARACTERS)
+        self.cards: dict[str, CharacterCard] = {}
         self.galuf_is_krile = False
-        self.galuf_sprite_button: tk.Button | None = None
-        self.is_fullscreen = False
+        self.fullscreen_button: tk.Button | None = None
 
         self._build_header()
         self._build_character_grid()
@@ -95,81 +296,17 @@ class FF5JobFiestaApp(tk.Tk):
         grid_frame.pack(padx=16, pady=8)
 
         for index, character in enumerate(CHARACTERS):
-            card = tk.Frame(
+            sprite_path = SPRITES[character]
+            on_toggle = self.toggle_galuf_krile_sprite if character == "Galuf/Krile" else None
+            card = CharacterCard(
                 grid_frame,
-                bg="#18254c",
-                bd=0,
-                relief="flat",
-                padx=12,
-                pady=12,
-                width=340,
-                height=320,
+                character,
+                sprite_path,
+                row=index // 2,
+                column=index % 2,
+                on_toggle_sprite=on_toggle,
             )
-            card.grid(row=index // 2, column=index % 2, padx=12, pady=12, sticky="nsew")
-            card.grid_propagate(False)
-
-            sprite = self._load_character_image(character)
-            sprite_container = tk.Frame(card, bg="#18254c")
-            sprite_container.pack(pady=(0, 10), fill="x")
-
-            sprite_label = tk.Label(sprite_container, image=sprite, bg="#18254c")
-            sprite_label.image = sprite
-            sprite_label.pack()
-            self.sprite_labels[character] = sprite_label
-
-            if character == "Galuf/Krile":
-                self.galuf_sprite_button = tk.Button(
-                    sprite_container,
-                    text="Galuf",
-                    command=self.toggle_galuf_krile_sprite,
-                    bg="#5fc5ff",
-                    fg="#081222",
-                    activebackground="#7fd4ff",
-                    relief="flat",
-                    width=5,
-                    height=1,
-                    font=("Segoe UI", 7, "bold"),
-                )
-                self.galuf_sprite_button.place(relx=0.0, rely=0.0, x=4, y=4)
-
-            name_label = tk.Label(
-                card,
-                text=character,
-                fg="#ffffff",
-                bg="#18254c",
-                font=("Segoe UI", 14, "bold"),
-            )
-            name_label.pack(pady=(0, 6))
-
-            job_rows: list[tk.Label] = []
-            for crystal in CRYSTALS:
-                row = tk.Frame(card, bg="#1f305a")
-                row.pack(fill="x", pady=4)
-
-                crystal_label = tk.Label(
-                    row,
-                    text=f"{crystal}:",
-                    fg="#a7b8dc",
-                    bg="#1f305a",
-                    font=("Segoe UI", 9, "bold"),
-                    width=10,
-                    anchor="w",
-                )
-                crystal_label.pack(side="left")
-
-                job_label = tk.Label(
-                    row,
-                    text="-",
-                    fg="#edf2ff",
-                    bg="#1f305a",
-                    font=("Segoe UI", 10),
-                    anchor="w",
-                    width=13,
-                )
-                job_label.pack(side="left", fill="x", expand=True)
-                job_rows.append(job_label)
-
-            self.job_labels[character] = job_rows
+            self.cards[character] = card
 
     def _build_footer(self) -> None:
         footer = tk.Frame(self, bg="#0f162c")
@@ -233,133 +370,38 @@ class FF5JobFiestaApp(tk.Tk):
         )
         randomize_button.pack(side="left")
 
-        self._build_options_menu()
+        self.options_panel = OptionsPanel(self)
 
     def _clear_seed_placeholder(self, event: Any) -> None:
         if self.seed_var.get() == "Seed (optional)":
             self.seed_var.set("")
 
-    def _build_options_menu(self) -> None:
-        self.options_open = False
-        self.exclude_berserker_var = tk.BooleanVar(value=False)
-        self.allow_same_crystal_job_var = tk.BooleanVar(value=False)
-        self.include_previous_crystals_var = tk.BooleanVar(value=False)
-
-        self.options_frame = tk.Frame(self, bg="#121b35", bd=1, relief="solid")
-        self.options_frame.place_forget()
-
-        title = tk.Label(
-            self.options_frame,
-            text="Options",
-            fg="#edf2ff",
-            bg="#121b35",
-            font=("Segoe UI", 12, "bold"),
-        )
-        title.pack(padx=12, pady=(12, 6), anchor="w")
-
-        berserker_check = tk.Checkbutton(
-            self.options_frame,
-            text="Exclude Berserker",
-            variable=self.exclude_berserker_var,
-            fg="#edf2ff",
-            bg="#121b35",
-            selectcolor="#121b35",
-            activebackground="#121b35",
-            activeforeground="#edf2ff",
-            font=("Segoe UI", 10),
-            bd=0,
-            highlightthickness=0,
-            anchor="w",
-        )
-        berserker_check.pack(fill="x", padx=12, pady=4)
-
-        duplicate_check = tk.Checkbutton(
-            self.options_frame,
-            text="Allow same job in same crystal",
-            variable=self.allow_same_crystal_job_var,
-            fg="#edf2ff",
-            bg="#121b35",
-            selectcolor="#121b35",
-            activebackground="#121b35",
-            activeforeground="#edf2ff",
-            font=("Segoe UI", 10),
-            bd=0,
-            highlightthickness=0,
-            anchor="w",
-        )
-        duplicate_check.pack(fill="x", padx=12, pady=4)
-
-        previous_check = tk.Checkbutton(
-            self.options_frame,
-            text="Include previous crystal jobs",
-            variable=self.include_previous_crystals_var,
-            fg="#edf2ff",
-            bg="#121b35",
-            selectcolor="#121b35",
-            activebackground="#121b35",
-            activeforeground="#edf2ff",
-            font=("Segoe UI", 10),
-            bd=0,
-            highlightthickness=0,
-            anchor="w",
-        )
-        previous_check.pack(fill="x", padx=12, pady=4)
-
-        close_button = tk.Button(
-            self.options_frame,
-            text="Close",
-            command=self.toggle_options_menu,
-            bg="#5fc5ff",
-            fg="#081222",
-            relief="flat",
-            padx=10,
-            pady=6,
-            font=("Segoe UI", 10, "bold"),
-        )
-        close_button.pack(padx=12, pady=(10, 12), anchor="e")
-
     def toggle_options_menu(self) -> None:
-        if self.options_open:
-            self.options_frame.place_forget()
-            self.options_open = False
-            return
-
-        self.options_frame.place(relx=1.0, rely=0.0, x=-16, y=56, anchor="ne", width=260)
-        self.options_open = True
+        self.options_panel.toggle()
 
     def toggle_fullscreen(self) -> None:
         self.is_fullscreen = not self.is_fullscreen
         self.attributes("-fullscreen", self.is_fullscreen)
         if self.fullscreen_button:
-            self.fullscreen_button.configure(text="Windowed" if self.is_fullscreen else "Full Screen")
+            self.fullscreen_button.configure(
+                text="Windowed" if self.is_fullscreen else "Full Screen"
+            )
 
     def _handle_escape(self, event: Any) -> None:
         if self.is_fullscreen:
             self.toggle_fullscreen()
 
-    def _load_character_image(self, character: str) -> tk.PhotoImage:
-        path = Path(__file__).parent / SPRITES[character]
-        if not path.exists():
-            raise FileNotFoundError(f"Sprite not found: {path}")
-        image = tk.PhotoImage(file=str(path))
-        self.images[character] = image
-        return image
-
     def toggle_galuf_krile_sprite(self) -> None:
         self.galuf_is_krile = not self.galuf_is_krile
-        sprite_name = "Krile" if self.galuf_is_krile else "Galuf"
-        sprite_file = "Assets/Krile_freelancer.png" if self.galuf_is_krile else "Assets/Galuf_freelancer.png"
-        image = tk.PhotoImage(file=str(Path(__file__).parent / sprite_file))
-        self.images["Galuf/Krile"] = image
-        sprite_label = self.sprite_labels.get("Galuf/Krile")
-        if sprite_label:
-            sprite_label.configure(image=image)
-            sprite_label.image = image
-
-        if self.galuf_sprite_button:
-            self.galuf_sprite_button.configure(
-                text="Krile" if self.galuf_is_krile else "Galuf"
-            )
+        sprite_file = (
+            "Assets/Krile_freelancer.png"
+            if self.galuf_is_krile
+            else "Assets/Galuf_freelancer.png"
+        )
+        card = self.cards.get("Galuf/Krile")
+        if card:
+            button_text = "Krile" if self.galuf_is_krile else "Galuf"
+            card.update_sprite(Path(__file__).parent / sprite_file, button_text)
 
     def randomize_and_update(self) -> None:
         seed = None
@@ -370,23 +412,24 @@ class FF5JobFiestaApp(tk.Tk):
             except ValueError:
                 seed = None
 
-        exclude_berserker = self.exclude_berserker_var.get()
-        allow_same_crystal_job = self.allow_same_crystal_job_var.get()
-        include_previous_crystals = self.include_previous_crystals_var.get()
-        assignments = randomize_jobs(
+        exclude_berserker, allow_same_crystal_job, include_previous_crystals = (
+            self.options_panel.get_settings()
+        )
+        assignments = self.randomizer.randomize(
             seed,
             exclude_berserker=exclude_berserker,
             allow_same_crystal_job=allow_same_crystal_job,
             include_previous_crystals=include_previous_crystals,
         )
-        for character, labels in self.job_labels.items():
-            for label, crystal in zip(labels, CRYSTALS):
-                label.config(text=assignments[character][crystal])
+
+        for character, card in self.cards.items():
+            card.update_jobs(assignments[character])
 
 
 def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] in {"console", "print"}:
-        assignments = randomize_jobs()
+        randomizer = JobRandomizer(CRYSTALS, CHARACTERS)
+        assignments = randomizer.randomize()
         for character, crystals in assignments.items():
             print(f"\n{character}:")
             for crystal, job in crystals.items():

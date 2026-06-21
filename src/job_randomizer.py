@@ -1,0 +1,44 @@
+import random
+from typing import Dict
+
+
+class JobRandomizer:
+    def __init__(self, crystals: Dict[str, list[str]], characters: list[str]) -> None:
+        self.crystals = crystals
+        self.characters = characters
+
+    def randomize(
+        self,
+        seed: int | None = None,
+        exclude_berserker: bool = False,
+        allow_same_crystal_job: bool = False,
+        include_previous_crystals: bool = False,
+    ) -> dict:
+        if seed is not None:
+            random.seed(seed)
+
+        result = {character: {} for character in self.characters}
+        crystal_names = list(self.crystals.keys())
+
+        for crystal_index, crystal in enumerate(crystal_names):
+            jobs = self.crystals[crystal]
+            if include_previous_crystals and crystal_index > 0:
+                previous_jobs = [
+                    job
+                    for previous_crystal in crystal_names[:crystal_index]
+                    for job in self.crystals[previous_crystal]
+                ]
+                jobs = previous_jobs + jobs
+
+            available_jobs = [
+                job for job in jobs if not (exclude_berserker and job == "Berserker")
+            ]
+            if allow_same_crystal_job:
+                assignments = [random.choice(available_jobs) for _ in self.characters]
+            else:
+                assignments = random.sample(available_jobs, k=len(self.characters))
+
+            for character, job in zip(self.characters, assignments):
+                result[character][crystal] = job
+
+        return result
