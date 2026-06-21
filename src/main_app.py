@@ -1,3 +1,4 @@
+import random
 import tkinter as tk
 from pathlib import Path
 from typing import Any
@@ -84,6 +85,7 @@ class FF5JobFiestaApp(tk.Tk):
         seed_entry.pack(side="left", padx=(0, 10))
         seed_entry.insert(0, "Seed (optional)")
         seed_entry.bind("<FocusIn>", self._clear_seed_placeholder)
+        seed_entry.bind("<FocusOut>", self._restore_seed_placeholder)
 
         options_button = tk.Button(
             footer,
@@ -128,11 +130,38 @@ class FF5JobFiestaApp(tk.Tk):
         )
         randomize_button.pack(side="left")
 
+        self.seed_info_label = tk.Label(
+            footer,
+            text="",
+            fg="#bbc8ea",
+            bg="#0f162c",
+            font=("Segoe UI", 10),
+        )
+        self.seed_info_label.pack(side="left", padx=(14, 0))
+
+        copy_seed_button = tk.Button(
+            footer,
+            text="Copy Seed",
+            command=self.copy_seed_to_clipboard,
+            bg="#2f3c6b",
+            fg="#edf2ff",
+            activebackground="#3f4c7b",
+            relief="flat",
+            padx=10,
+            pady=8,
+            font=("Segoe UI", 10, "bold"),
+        )
+        copy_seed_button.pack(side="left", padx=(10, 0))
+
         self.options_panel = OptionsPanel(self)
 
     def _clear_seed_placeholder(self, event: Any) -> None:
         if self.seed_var.get() == "Seed (optional)":
             self.seed_var.set("")
+
+    def _restore_seed_placeholder(self, event: Any) -> None:
+        if not self.seed_var.get().strip():
+            self.seed_var.set("Seed (optional)")
 
     def toggle_options_menu(self) -> None:
         self.options_panel.toggle()
@@ -161,6 +190,14 @@ class FF5JobFiestaApp(tk.Tk):
             button_text = "Krile" if self.galuf_is_krile else "Galuf"
             card.update_sprite(ASSETS_DIR / sprite_file, button_text)
 
+    def copy_seed_to_clipboard(self) -> None:
+        seed_text = self.seed_info_label.cget("text")
+        if seed_text.startswith("Share this seed:"):
+            seed = seed_text.split(":", 1)[1].strip()
+            self.clipboard_clear()
+            self.clipboard_append(seed)
+            self.seed_info_label.configure(text=f"Seed copied: {seed}")
+
     def randomize_and_update(self) -> None:
         seed = None
         seed_text = self.seed_var.get()
@@ -169,6 +206,9 @@ class FF5JobFiestaApp(tk.Tk):
                 seed = int(seed_text)
             except ValueError:
                 seed = None
+
+        if seed is None:
+            seed = random.randint(0, 2**31 - 1)
 
         exclude_berserker, allow_same_crystal_job, include_previous_crystals = (
             self.options_panel.get_settings()
@@ -182,3 +222,5 @@ class FF5JobFiestaApp(tk.Tk):
 
         for character, card in self.cards.items():
             card.update_jobs(assignments[character])
+
+        self.seed_info_label.configure(text=f"Share this seed: {seed}")
