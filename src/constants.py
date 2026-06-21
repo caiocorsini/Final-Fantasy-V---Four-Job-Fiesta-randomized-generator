@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 CRYSTALS = {
@@ -13,4 +14,12 @@ SPRITES = {
     "Faris": "Faris_freelancer.png",
     "Galuf/Krile": "Galuf_freelancer.png",
 }
-ASSETS_DIR = Path(__file__).parent.parent / "Assets"
+
+
+def _get_assets_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / "Assets"
+    return Path(__file__).parent.parent / "Assets"
+
+
+ASSETS_DIR = _get_assets_dir()
