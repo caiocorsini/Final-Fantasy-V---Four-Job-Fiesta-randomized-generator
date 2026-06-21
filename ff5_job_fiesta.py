@@ -23,12 +23,19 @@ def randomize_jobs(
     seed: int | None = None,
     exclude_berserker: bool = False,
     allow_same_crystal_job: bool = False,
+    include_previous_crystals: bool = False,
 ) -> dict:
     if seed is not None:
         random.seed(seed)
 
     result = {character: {} for character in CHARACTERS}
-    for crystal, jobs in CRYSTALS.items():
+    crystal_names = list(CRYSTALS.keys())
+    for crystal_index, crystal in enumerate(crystal_names):
+        jobs = CRYSTALS[crystal]
+        if include_previous_crystals and crystal_index > 0:
+            previous_jobs = [job for previous_crystal in crystal_names[:crystal_index] for job in CRYSTALS[previous_crystal]]
+            jobs = previous_jobs + jobs
+
         available_jobs = [job for job in jobs if not (exclude_berserker and job == "Berserker")]
         if allow_same_crystal_job:
             assignments = [random.choice(available_jobs) for _ in CHARACTERS]
@@ -196,6 +203,7 @@ class FF5JobFiestaApp(tk.Tk):
         self.options_open = False
         self.exclude_berserker_var = tk.BooleanVar(value=False)
         self.allow_same_crystal_job_var = tk.BooleanVar(value=False)
+        self.include_previous_crystals_var = tk.BooleanVar(value=False)
 
         self.options_frame = tk.Frame(self, bg="#121b35", bd=1, relief="solid")
         self.options_frame.place_forget()
@@ -241,6 +249,22 @@ class FF5JobFiestaApp(tk.Tk):
         )
         duplicate_check.pack(fill="x", padx=12, pady=4)
 
+        previous_check = tk.Checkbutton(
+            self.options_frame,
+            text="Include previous crystal jobs",
+            variable=self.include_previous_crystals_var,
+            fg="#edf2ff",
+            bg="#121b35",
+            selectcolor="#121b35",
+            activebackground="#121b35",
+            activeforeground="#edf2ff",
+            font=("Segoe UI", 10),
+            bd=0,
+            highlightthickness=0,
+            anchor="w",
+        )
+        previous_check.pack(fill="x", padx=12, pady=4)
+
         close_button = tk.Button(
             self.options_frame,
             text="Close",
@@ -282,10 +306,12 @@ class FF5JobFiestaApp(tk.Tk):
 
         exclude_berserker = self.exclude_berserker_var.get()
         allow_same_crystal_job = self.allow_same_crystal_job_var.get()
+        include_previous_crystals = self.include_previous_crystals_var.get()
         assignments = randomize_jobs(
             seed,
             exclude_berserker=exclude_berserker,
             allow_same_crystal_job=allow_same_crystal_job,
+            include_previous_crystals=include_previous_crystals,
         )
         for character, labels in self.job_labels.items():
             for label, crystal in zip(labels, CRYSTALS):
