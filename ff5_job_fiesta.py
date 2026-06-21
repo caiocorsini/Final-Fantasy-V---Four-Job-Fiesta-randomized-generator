@@ -52,6 +52,8 @@ class FF5JobFiestaApp(tk.Tk):
         super().__init__()
         self.title("FF5 4 Job Fiesta Randomizer")
         self.configure(bg="#0f162c")
+        self.geometry("720x680")
+        self.minsize(720, 620)
         self.resizable(False, False)
 
         self.images: dict[str, tk.PhotoImage] = {}
@@ -59,6 +61,7 @@ class FF5JobFiestaApp(tk.Tk):
         self.job_labels: dict[str, list[tk.Label]] = {}
         self.galuf_is_krile = False
         self.galuf_sprite_button: tk.Button | None = None
+        self.is_fullscreen = False
 
         self._build_header()
         self._build_character_grid()
@@ -201,6 +204,21 @@ class FF5JobFiestaApp(tk.Tk):
         )
         options_button.pack(side="left", padx=(0, 14))
 
+        self.fullscreen_button = tk.Button(
+            footer,
+            text="Full Screen",
+            command=self.toggle_fullscreen,
+            bg="#2f3c6b",
+            fg="#edf2ff",
+            activebackground="#3f4c7b",
+            relief="flat",
+            padx=10,
+            pady=8,
+            font=("Segoe UI", 10, "bold"),
+        )
+        self.fullscreen_button.pack(side="left", padx=(0, 14))
+        self.bind("<Escape>", self._handle_escape)
+
         randomize_button = tk.Button(
             footer,
             text="Randomize Jobs",
@@ -308,6 +326,16 @@ class FF5JobFiestaApp(tk.Tk):
 
         self.options_frame.place(relx=1.0, rely=0.0, x=-16, y=56, anchor="ne", width=260)
         self.options_open = True
+
+    def toggle_fullscreen(self) -> None:
+        self.is_fullscreen = not self.is_fullscreen
+        self.attributes("-fullscreen", self.is_fullscreen)
+        if self.fullscreen_button:
+            self.fullscreen_button.configure(text="Windowed" if self.is_fullscreen else "Full Screen")
+
+    def _handle_escape(self, event: Any) -> None:
+        if self.is_fullscreen:
+            self.toggle_fullscreen()
 
     def _load_character_image(self, character: str) -> tk.PhotoImage:
         path = Path(__file__).parent / SPRITES[character]
