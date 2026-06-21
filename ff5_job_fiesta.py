@@ -6,7 +6,7 @@ CRYSTALS = {
     "Fire": ["Geomancer", "Beastmaster", "Ninja", "Bard", "Ranger"],
     "Earth": ["Samurai", "Dancer", "Dragoon", "Chemist"],
 }
-CHARACTERS = ["Bartz", "Lenna", "Faris", "Galuf"]
+CHARACTERS = ["Bartz", "Lenna", "Faris", "Galuf/Krile"]
 
 
 def randomize_jobs(seed: int | None = None) -> dict:
