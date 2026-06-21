@@ -73,8 +73,18 @@ class FF5JobFiestaApp(tk.Tk):
         grid_frame.pack(padx=16, pady=8)
 
         for index, character in enumerate(CHARACTERS):
-            card = tk.Frame(grid_frame, bg="#18254c", bd=0, relief="flat", padx=12, pady=12)
+            card = tk.Frame(
+                grid_frame,
+                bg="#18254c",
+                bd=0,
+                relief="flat",
+                padx=12,
+                pady=12,
+                width=340,
+                height=320,
+            )
             card.grid(row=index // 2, column=index % 2, padx=12, pady=12, sticky="nsew")
+            card.grid_propagate(False)
 
             sprite = self._load_character_image(character)
             sprite_label = tk.Label(card, image=sprite, bg="#18254c")
@@ -113,6 +123,7 @@ class FF5JobFiestaApp(tk.Tk):
                     bg="#1f305a",
                     font=("Segoe UI", 10),
                     anchor="w",
+                    width=13,
                 )
                 job_label.pack(side="left", fill="x", expand=True)
                 job_rows.append(job_label)
