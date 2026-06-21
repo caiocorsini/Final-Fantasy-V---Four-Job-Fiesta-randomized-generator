@@ -19,13 +19,14 @@ SPRITES = {
 }
 
 
-def randomize_jobs(seed: int | None = None) -> dict:
+def randomize_jobs(seed: int | None = None, exclude_berserker: bool = False) -> dict:
     if seed is not None:
         random.seed(seed)
 
     result = {character: {} for character in CHARACTERS}
     for crystal, jobs in CRYSTALS.items():
-        assignments = random.sample(jobs, k=4)
+        available_jobs = [job for job in jobs if not (exclude_berserker and job == "Berserker")]
+        assignments = random.sample(available_jobs, k=4)
         for character, job in zip(CHARACTERS, assignments):
             result[character][crystal] = job
     return result
@@ -149,6 +150,22 @@ class FF5JobFiestaApp(tk.Tk):
         seed_entry.insert(0, "Seed (optional)")
         seed_entry.bind("<FocusIn>", self._clear_seed_placeholder)
 
+        self.exclude_berserker_var = tk.BooleanVar(value=False)
+        exclude_check = tk.Checkbutton(
+            footer,
+            text="Exclude Berserker",
+            variable=self.exclude_berserker_var,
+            fg="#edf2ff",
+            bg="#0f162c",
+            selectcolor="#0f162c",
+            activebackground="#0f162c",
+            activeforeground="#edf2ff",
+            font=("Segoe UI", 10),
+            bd=0,
+            highlightthickness=0,
+        )
+        exclude_check.pack(side="left", padx=(0, 14))
+
         randomize_button = tk.Button(
             footer,
             text="Randomize Jobs",
@@ -184,7 +201,8 @@ class FF5JobFiestaApp(tk.Tk):
             except ValueError:
                 seed = None
 
-        assignments = randomize_jobs(seed)
+        exclude_berserker = self.exclude_berserker_var.get()
+        assignments = randomize_jobs(seed, exclude_berserker=exclude_berserker)
         for character, labels in self.job_labels.items():
             for label, crystal in zip(labels, CRYSTALS):
                 label.config(text=assignments[character][crystal])
