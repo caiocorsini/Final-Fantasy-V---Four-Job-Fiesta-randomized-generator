@@ -25,6 +25,21 @@ From the project root:
 python main.py
 ```
 
+## Build an executable (Windows)
+
+1. Install PyInstaller:
+   ```bash
+   python -m pip install pyinstaller
+   ```
+2. Build the executable from the project root:
+   ```bash
+   python -m PyInstaller --onefile --windowed --name "FF5_4_Job_Fiesta" --add-data "Assets;Assets" main.py
+   ```
+3. Open the generated executable:
+   - `dist\FF5_4_Job_Fiesta.exe`
+
+This packages the app as a Windows desktop executable with the `Assets` folder included.
+
 ## How to use
 
 1. Launch the app with `python main.py`.
