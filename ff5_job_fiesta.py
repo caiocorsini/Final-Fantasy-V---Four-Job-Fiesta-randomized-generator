@@ -19,14 +19,22 @@ SPRITES = {
 }
 
 
-def randomize_jobs(seed: int | None = None, exclude_berserker: bool = False) -> dict:
+def randomize_jobs(
+    seed: int | None = None,
+    exclude_berserker: bool = False,
+    allow_same_crystal_job: bool = False,
+) -> dict:
     if seed is not None:
         random.seed(seed)
 
     result = {character: {} for character in CHARACTERS}
     for crystal, jobs in CRYSTALS.items():
         available_jobs = [job for job in jobs if not (exclude_berserker and job == "Berserker")]
-        assignments = random.sample(available_jobs, k=4)
+        if allow_same_crystal_job:
+            assignments = [random.choice(available_jobs) for _ in CHARACTERS]
+        else:
+            assignments = random.sample(available_jobs, k=4)
+
         for character, job in zip(CHARACTERS, assignments):
             result[character][crystal] = job
     return result
@@ -150,21 +158,19 @@ class FF5JobFiestaApp(tk.Tk):
         seed_entry.insert(0, "Seed (optional)")
         seed_entry.bind("<FocusIn>", self._clear_seed_placeholder)
 
-        self.exclude_berserker_var = tk.BooleanVar(value=False)
-        exclude_check = tk.Checkbutton(
+        options_button = tk.Button(
             footer,
-            text="Exclude Berserker",
-            variable=self.exclude_berserker_var,
+            text="Options",
+            command=self.toggle_options_menu,
+            bg="#2f3c6b",
             fg="#edf2ff",
-            bg="#0f162c",
-            selectcolor="#0f162c",
-            activebackground="#0f162c",
-            activeforeground="#edf2ff",
-            font=("Segoe UI", 10),
-            bd=0,
-            highlightthickness=0,
+            activebackground="#3f4c7b",
+            relief="flat",
+            padx=10,
+            pady=8,
+            font=("Segoe UI", 10, "bold"),
         )
-        exclude_check.pack(side="left", padx=(0, 14))
+        options_button.pack(side="left", padx=(0, 14))
 
         randomize_button = tk.Button(
             footer,
@@ -180,9 +186,82 @@ class FF5JobFiestaApp(tk.Tk):
         )
         randomize_button.pack(side="left")
 
+        self._build_options_menu()
+
     def _clear_seed_placeholder(self, event: Any) -> None:
         if self.seed_var.get() == "Seed (optional)":
             self.seed_var.set("")
+
+    def _build_options_menu(self) -> None:
+        self.options_open = False
+        self.exclude_berserker_var = tk.BooleanVar(value=False)
+        self.allow_same_crystal_job_var = tk.BooleanVar(value=False)
+
+        self.options_frame = tk.Frame(self, bg="#121b35", bd=1, relief="solid")
+        self.options_frame.place_forget()
+
+        title = tk.Label(
+            self.options_frame,
+            text="Options",
+            fg="#edf2ff",
+            bg="#121b35",
+            font=("Segoe UI", 12, "bold"),
+        )
+        title.pack(padx=12, pady=(12, 6), anchor="w")
+
+        berserker_check = tk.Checkbutton(
+            self.options_frame,
+            text="Exclude Berserker",
+            variable=self.exclude_berserker_var,
+            fg="#edf2ff",
+            bg="#121b35",
+            selectcolor="#121b35",
+            activebackground="#121b35",
+            activeforeground="#edf2ff",
+            font=("Segoe UI", 10),
+            bd=0,
+            highlightthickness=0,
+            anchor="w",
+        )
+        berserker_check.pack(fill="x", padx=12, pady=4)
+
+        duplicate_check = tk.Checkbutton(
+            self.options_frame,
+            text="Allow same job in same crystal",
+            variable=self.allow_same_crystal_job_var,
+            fg="#edf2ff",
+            bg="#121b35",
+            selectcolor="#121b35",
+            activebackground="#121b35",
+            activeforeground="#edf2ff",
+            font=("Segoe UI", 10),
+            bd=0,
+            highlightthickness=0,
+            anchor="w",
+        )
+        duplicate_check.pack(fill="x", padx=12, pady=4)
+
+        close_button = tk.Button(
+            self.options_frame,
+            text="Close",
+            command=self.toggle_options_menu,
+            bg="#5fc5ff",
+            fg="#081222",
+            relief="flat",
+            padx=10,
+            pady=6,
+            font=("Segoe UI", 10, "bold"),
+        )
+        close_button.pack(padx=12, pady=(10, 12), anchor="e")
+
+    def toggle_options_menu(self) -> None:
+        if self.options_open:
+            self.options_frame.place_forget()
+            self.options_open = False
+            return
+
+        self.options_frame.place(relx=1.0, rely=0.0, x=-16, y=56, anchor="ne", width=260)
+        self.options_open = True
 
     def _load_character_image(self, character: str) -> tk.PhotoImage:
         path = Path(__file__).parent / SPRITES[character]
@@ -202,7 +281,12 @@ class FF5JobFiestaApp(tk.Tk):
                 seed = None
 
         exclude_berserker = self.exclude_berserker_var.get()
-        assignments = randomize_jobs(seed, exclude_berserker=exclude_berserker)
+        allow_same_crystal_job = self.allow_same_crystal_job_var.get()
+        assignments = randomize_jobs(
+            seed,
+            exclude_berserker=exclude_berserker,
+            allow_same_crystal_job=allow_same_crystal_job,
+        )
         for character, labels in self.job_labels.items():
             for label, crystal in zip(labels, CRYSTALS):
                 label.config(text=assignments[character][crystal])
