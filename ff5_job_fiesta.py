@@ -55,7 +55,10 @@ class FF5JobFiestaApp(tk.Tk):
         self.resizable(False, False)
 
         self.images: dict[str, tk.PhotoImage] = {}
+        self.sprite_labels: dict[str, tk.Label] = {}
         self.job_labels: dict[str, list[tk.Label]] = {}
+        self.galuf_is_krile = False
+        self.galuf_sprite_button: tk.Button | None = None
 
         self._build_header()
         self._build_character_grid()
@@ -103,9 +106,28 @@ class FF5JobFiestaApp(tk.Tk):
             card.grid_propagate(False)
 
             sprite = self._load_character_image(character)
-            sprite_label = tk.Label(card, image=sprite, bg="#18254c")
+            sprite_container = tk.Frame(card, bg="#18254c")
+            sprite_container.pack(pady=(0, 10), fill="x")
+
+            sprite_label = tk.Label(sprite_container, image=sprite, bg="#18254c")
             sprite_label.image = sprite
-            sprite_label.pack(pady=(0, 10))
+            sprite_label.pack()
+            self.sprite_labels[character] = sprite_label
+
+            if character == "Galuf/Krile":
+                self.galuf_sprite_button = tk.Button(
+                    sprite_container,
+                    text="Galuf",
+                    command=self.toggle_galuf_krile_sprite,
+                    bg="#5fc5ff",
+                    fg="#081222",
+                    activebackground="#7fd4ff",
+                    relief="flat",
+                    width=5,
+                    height=1,
+                    font=("Segoe UI", 7, "bold"),
+                )
+                self.galuf_sprite_button.place(relx=0.0, rely=0.0, x=4, y=4)
 
             name_label = tk.Label(
                 card,
@@ -294,6 +316,22 @@ class FF5JobFiestaApp(tk.Tk):
         image = tk.PhotoImage(file=str(path))
         self.images[character] = image
         return image
+
+    def toggle_galuf_krile_sprite(self) -> None:
+        self.galuf_is_krile = not self.galuf_is_krile
+        sprite_name = "Krile" if self.galuf_is_krile else "Galuf"
+        sprite_file = "Assets/Krile_freelancer.png" if self.galuf_is_krile else "Assets/Galuf_freelancer.png"
+        image = tk.PhotoImage(file=str(Path(__file__).parent / sprite_file))
+        self.images["Galuf/Krile"] = image
+        sprite_label = self.sprite_labels.get("Galuf/Krile")
+        if sprite_label:
+            sprite_label.configure(image=image)
+            sprite_label.image = image
+
+        if self.galuf_sprite_button:
+            self.galuf_sprite_button.configure(
+                text="Krile" if self.galuf_is_krile else "Galuf"
+            )
 
     def randomize_and_update(self) -> None:
         seed = None
