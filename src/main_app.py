@@ -35,7 +35,7 @@ class FF5JobFiestaApp(tk.Tk):
 
         title = tk.Label(
             header_frame,
-            text="Final Fantasy V 4 Job Fiesta",
+            text="Final Fantasy V - 4 Job Fiesta",
             fg="#edf2ff",
             bg="#0f162c",
             font=("Segoe UI", 20, "bold"),
