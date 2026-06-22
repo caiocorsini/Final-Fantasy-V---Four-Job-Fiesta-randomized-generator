@@ -22,6 +22,7 @@ class CharacterCard:
         self.crystal_jobs = crystal_jobs or {}
         self.image = self._load_image(self.sprite_path)
         self.job_labels: list[tk.Label] = []
+        self.job_vars: list[tk.StringVar] = []
         self.current_assignments: dict[str, str] = {}
         self.crystals = ["Wind", "Water", "Fire", "Earth"]
 
@@ -105,16 +106,63 @@ class CharacterCard:
             job_label.config(cursor="hand2")
             self.job_labels.append(job_label)
 
+            # Add dropdown menu for job selection
+            available_jobs = self.crystal_jobs.get(crystal, ["-"])
+            job_var = tk.StringVar(value="-")
+            self.job_vars.append(job_var)
+
+            # Create a menu for the dropdown
+            menu = tk.Menu(
+                row_frame,
+                tearoff=0,
+                bg="#152246",
+                fg="#edf2ff",
+                activebackground="#2f3c6b",
+                activeforeground="#edf2ff",
+                font=("Segoe UI", 9),
+            )
+            for job in available_jobs:
+                menu.add_command(
+                    label=job,
+                    command=lambda selected=job, idx=crystal_index: self._on_dropdown_changed(idx, selected),
+                )
+
+            # Create dropdown button that shows just a small arrow
+            dropdown_button = tk.Button(
+                row_frame,
+                text="▼",
+                command=lambda m=menu, btn=None: self._show_menu(m, btn),
+                bg="#2f3c6b",
+                fg="#a7b8dc",
+                activebackground="#3f4c7b",
+                activeforeground="#edf2ff",
+                highlightthickness=0,
+                relief="flat",
+                font=("Segoe UI", 8),
+                width=2,
+                height=1,
+                padx=2,
+                pady=0,
+            )
+            dropdown_button.pack(side="right", padx=(4, 0))
+            dropdown_button.menu = menu
+
+
     def _load_image(self, path: Path) -> tk.PhotoImage:
         if not path.exists():
             raise FileNotFoundError(f"Sprite not found: {path}")
         image = tk.PhotoImage(file=str(path))
         return image
 
+    def _show_menu(self, menu: tk.Menu, button: tk.Button | None) -> None:
+        """Display the dropdown menu."""
+        menu.post(menu.winfo_pointerx(), menu.winfo_pointery() - 5)
+
     def update_jobs(self, assignments: dict[str, str]) -> None:
         self.current_assignments = assignments.copy()
-        for label, job in zip(self.job_labels, assignments.values()):
+        for label, job_var, job in zip(self.job_labels, self.job_vars, assignments.values()):
             label.config(text=job)
+            job_var.set(job)
 
     def _on_job_clicked(self, crystal_index: int) -> None:
         """Handle job label clicks to cycle through available jobs."""
@@ -139,9 +187,24 @@ class CharacterCard:
         self.job_labels[crystal_index].config(text=new_job)
         self.current_assignments[crystal] = new_job
         
+        # Update the dropdown
+        self.job_vars[crystal_index].set(new_job)
+        
         # Notify the main app if callback is provided
         if self.on_job_changed:
             self.on_job_changed(self.character, crystal, new_job)
+
+    def _on_dropdown_changed(self, crystal_index: int, selected_job: str) -> None:
+        """Handle dropdown selection changes."""
+        crystal = self.crystals[crystal_index]
+        
+        # Update the label
+        self.job_labels[crystal_index].config(text=selected_job)
+        self.current_assignments[crystal] = selected_job
+        
+        # Notify the main app if callback is provided
+        if self.on_job_changed:
+            self.on_job_changed(self.character, crystal, selected_job)
 
     def update_sprite(self, path: Path, button_text: str) -> None:
         self.image = self._load_image(path)
