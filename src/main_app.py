@@ -1,6 +1,8 @@
+import json
 import random
 import tkinter as tk
 from pathlib import Path
+from tkinter import filedialog, messagebox
 from typing import Any
 
 from .character_card import CharacterCard
@@ -156,6 +158,34 @@ class FF5JobFiestaApp(tk.Tk):
         )
         copy_seed_button.pack(side="left", padx=(10, 0))
 
+        save_seed_button = tk.Button(
+            footer,
+            text="Save Seed",
+            command=self.save_seed_config,
+            bg="#2f3c6b",
+            fg="#edf2ff",
+            activebackground="#3f4c7b",
+            relief="flat",
+            padx=10,
+            pady=8,
+            font=("Segoe UI", 10, "bold"),
+        )
+        save_seed_button.pack(side="left", padx=(10, 0))
+
+        load_seed_button = tk.Button(
+            footer,
+            text="Load Seed",
+            command=self.load_seed_config,
+            bg="#2f3c6b",
+            fg="#edf2ff",
+            activebackground="#3f4c7b",
+            relief="flat",
+            padx=10,
+            pady=8,
+            font=("Segoe UI", 10, "bold"),
+        )
+        load_seed_button.pack(side="left", padx=(10, 0))
+
         self.options_panel = OptionsPanel(self)
 
     def _clear_seed_placeholder(self, event: Any) -> None:
@@ -236,3 +266,81 @@ class FF5JobFiestaApp(tk.Tk):
             card.update_jobs(assignments[character])
 
         self.seed_info_label.configure(text=f"Share this seed: {seed}")
+
+    def save_seed_config(self) -> None:
+        """Save the current seed and configuration options to a JSON file."""
+        seed_text = self.seed_info_label.cget("text")
+        if not seed_text.startswith("Share this seed:"):
+            messagebox.showwarning("No Seed", "Please randomize first to generate a seed.")
+            return
+
+        seed = seed_text.split(":", 1)[1].strip()
+        exclude_berserker, allow_same_crystal_job, include_previous_crystals = (
+            self.options_panel.get_settings()
+        )
+
+        seed_config = {
+            "seed": int(seed),
+            "exclude_berserker": exclude_berserker,
+            "allow_same_crystal_job": allow_same_crystal_job,
+            "include_previous_crystals": include_previous_crystals,
+        }
+
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")],
+            initialfile=f"ff5_seed_{seed}.json",
+        )
+
+        if file_path:
+            try:
+                with open(file_path, "w") as f:
+                    json.dump(seed_config, f, indent=2)
+                messagebox.showinfo("Success", f"Seed saved to {Path(file_path).name}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save seed: {str(e)}")
+
+    def load_seed_config(self) -> None:
+        """Load seed and configuration options from a JSON file."""
+        file_path = filedialog.askopenfilename(
+            filetypes=[("JSON Files", "*.json"), ("All Files", "*.*")]
+        )
+
+        if file_path:
+            try:
+                with open(file_path, "r") as f:
+                    seed_config = json.load(f)
+
+                # Validate the JSON structure
+                required_keys = {
+                    "seed",
+                    "exclude_berserker",
+                    "allow_same_crystal_job",
+                    "include_previous_crystals",
+                }
+                if not required_keys.issubset(seed_config.keys()):
+                    messagebox.showerror(
+                        "Invalid File", "File does not contain the required seed configuration."
+                    )
+                    return
+
+                # Set the seed in the input field
+                self.seed_var.set(str(seed_config["seed"]))
+
+                # Set the configuration options
+                self.options_panel.exclude_berserker_var.set(seed_config["exclude_berserker"])
+                self.options_panel.allow_same_crystal_job_var.set(
+                    seed_config["allow_same_crystal_job"]
+                )
+                self.options_panel.include_previous_crystals_var.set(
+                    seed_config["include_previous_crystals"]
+                )
+
+                messagebox.showinfo("Success", "Seed and configuration loaded successfully.")
+                # Automatically randomize with the loaded seed
+                self.randomize_and_update()
+
+            except json.JSONDecodeError:
+                messagebox.showerror("Error", "Invalid JSON file.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load seed: {str(e)}")
