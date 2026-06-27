@@ -249,14 +249,18 @@ class FF5JobFiestaApp(tk.Tk):
         if seed is None:
             seed = random.randint(0, 2**31 - 1)
 
-        exclude_berserker, allow_same_crystal_job, include_previous_crystals = (
-            self.options_panel.get_settings()
-        )
+        (
+            exclude_berserker,
+            allow_same_crystal_job,
+            include_previous_crystals,
+            selected_jobs,
+        ) = self.options_panel.get_settings()
         assignments = self.randomizer.randomize(
             seed,
             exclude_berserker=exclude_berserker,
             allow_same_crystal_job=allow_same_crystal_job,
             include_previous_crystals=include_previous_crystals,
+            selected_jobs=selected_jobs,
         )
 
         # Store current assignments for manual job changes
@@ -275,15 +279,19 @@ class FF5JobFiestaApp(tk.Tk):
             return
 
         seed = seed_text.split(":", 1)[1].strip()
-        exclude_berserker, allow_same_crystal_job, include_previous_crystals = (
-            self.options_panel.get_settings()
-        )
+        (
+            exclude_berserker,
+            allow_same_crystal_job,
+            include_previous_crystals,
+            selected_jobs,
+        ) = self.options_panel.get_settings()
 
         seed_config = {
             "seed": int(seed),
             "exclude_berserker": exclude_berserker,
             "allow_same_crystal_job": allow_same_crystal_job,
             "include_previous_crystals": include_previous_crystals,
+            "selected_jobs": sorted(selected_jobs),
         }
 
         file_path = filedialog.asksaveasfilename(
@@ -317,6 +325,7 @@ class FF5JobFiestaApp(tk.Tk):
                     "exclude_berserker",
                     "allow_same_crystal_job",
                     "include_previous_crystals",
+                    "selected_jobs",
                 }
                 if not required_keys.issubset(seed_config.keys()):
                     messagebox.showerror(
@@ -328,13 +337,13 @@ class FF5JobFiestaApp(tk.Tk):
                 self.seed_var.set(str(seed_config["seed"]))
 
                 # Set the configuration options
-                self.options_panel.exclude_berserker_var.set(seed_config["exclude_berserker"])
                 self.options_panel.allow_same_crystal_job_var.set(
                     seed_config["allow_same_crystal_job"]
                 )
                 self.options_panel.include_previous_crystals_var.set(
                     seed_config["include_previous_crystals"]
                 )
+                self.options_panel.set_selected_jobs(seed_config["selected_jobs"])
 
                 messagebox.showinfo("Success", "Seed and configuration loaded successfully.")
                 # Automatically randomize with the loaded seed
