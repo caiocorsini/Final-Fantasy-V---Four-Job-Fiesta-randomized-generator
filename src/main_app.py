@@ -19,6 +19,7 @@ class FF5JobFiestaApp(tk.Tk):
         self.geometry("720x760")
         self.minsize(720, 760)
         self.resizable(True, True)
+        self.state('zoomed')
 
         self.randomizer = JobRandomizer(CRYSTALS, CHARACTERS)
         self.cards: dict[str, CharacterCard] = {}
