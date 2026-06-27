@@ -7,11 +7,14 @@ class OptionsPanel:
     def __init__(self, parent: tk.Widget) -> None:
         self.options_open = False
         self.deep_customization_open = False
+        self.base_width = 260
+        self.wide_width = 420
         self.exclude_berserker_var = tk.BooleanVar(value=False)
         self.allow_same_crystal_job_var = tk.BooleanVar(value=False)
         self.include_previous_crystals_var = tk.BooleanVar(value=False)
         self.job_inclusion_vars: dict[str, tk.BooleanVar] = {}
         self.deep_customization_frame: tk.Frame | None = None
+        self.deep_customization_container: tk.Frame | None = None
 
         self.frame = tk.Frame(parent, bg="#121b35", bd=1, relief="solid")
         self.frame.place_forget()
@@ -69,12 +72,38 @@ class OptionsPanel:
         close_button.pack(padx=12, pady=(10, 12), anchor="e")
 
     def _build_deep_customization_panel(self) -> None:
-        self.deep_customization_frame = tk.Frame(
+        self.deep_customization_container = tk.Frame(
             self.frame,
             bg="#101a2d",
-            bd=1,
-            relief="solid",
         )
+
+        self.deep_customization_canvas = tk.Canvas(
+            self.deep_customization_container,
+            bg="#101a2d",
+            highlightthickness=0,
+            height=260,
+        )
+        self.deep_customization_scrollbar = tk.Scrollbar(
+            self.deep_customization_container,
+            orient="vertical",
+            command=self.deep_customization_canvas.yview,
+        )
+        self.deep_customization_canvas.configure(yscrollcommand=self.deep_customization_scrollbar.set)
+
+        self.deep_customization_frame = tk.Frame(
+            self.deep_customization_canvas,
+            bg="#101a2d",
+        )
+
+        self.deep_customization_canvas.create_window(
+            (0, 0), window=self.deep_customization_frame, anchor="nw"
+        )
+        self.deep_customization_frame.bind(
+            "<Configure>", self._on_deep_customization_configure
+        )
+
+        self.deep_customization_canvas.pack(side="left", fill="both", expand=True)
+        self.deep_customization_scrollbar.pack(side="right", fill="y")
 
         title = tk.Label(
             self.deep_customization_frame,
@@ -109,7 +138,7 @@ class OptionsPanel:
                     job_var.trace_add("write", self._sync_berserker_checkbox)
                 self._build_checkbutton(job, job_var, parent=jobs_frame)
 
-        self.deep_customization_frame.pack_forget()
+        self.deep_customization_container.pack_forget()
 
     def _sync_berserker_checkbox(self, *_args: object) -> None:
         berserker_var = self.job_inclusion_vars.get("Berserker")
@@ -118,17 +147,28 @@ class OptionsPanel:
 
     def toggle_deep_customization(self) -> None:
         if self.deep_customization_open:
-            self.deep_customization_frame.pack_forget()
+            self.deep_customization_container.pack_forget()
             self.deep_customization_open = False
+            self._update_panel_width(False)
             return
 
-        self.deep_customization_frame.pack(fill="x", padx=12, pady=(0, 4))
+        self.deep_customization_container.pack(fill="both", padx=12, pady=(0, 4), expand=True)
         self.deep_customization_open = True
+        self._update_panel_width(True)
 
     def _sync_berserker_selection(self, *_args: object) -> None:
         berserker_var = self.job_inclusion_vars.get("Berserker")
         if berserker_var is not None:
             berserker_var.set(not self.exclude_berserker_var.get())
+
+    def _on_deep_customization_configure(self, event: tk.Event) -> None:
+        self.deep_customization_canvas.configure(
+            scrollregion=self.deep_customization_canvas.bbox("all")
+        )
+
+    def _update_panel_width(self, wide: bool) -> None:
+        width = self.wide_width if wide else self.base_width
+        self.frame.place_configure(width=width)
 
     def _build_checkbutton(
         self,
