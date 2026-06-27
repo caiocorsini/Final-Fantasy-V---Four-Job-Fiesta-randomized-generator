@@ -14,6 +14,7 @@ class JobRandomizer:
         allow_same_crystal_job: bool = False,
         include_previous_crystals: bool = False,
         selected_jobs: set[str] | None = None,
+        all_job_select: bool = False,
     ) -> dict:
         if seed is not None:
             random.seed(seed)
@@ -25,16 +26,20 @@ class JobRandomizer:
 
         result = {character: {} for character in self.characters}
         crystal_names = list(self.crystals.keys())
+        all_jobs = [job for job_list in self.crystals.values() for job in job_list]
 
         for crystal_index, crystal in enumerate(crystal_names):
-            jobs = self.crystals[crystal]
-            if include_previous_crystals and crystal_index > 0:
-                previous_jobs = [
-                    job
-                    for previous_crystal in crystal_names[:crystal_index]
-                    for job in self.crystals[previous_crystal]
-                ]
-                jobs = previous_jobs + jobs
+            if all_job_select:
+                jobs = all_jobs
+            else:
+                jobs = self.crystals[crystal]
+                if include_previous_crystals and crystal_index > 0:
+                    previous_jobs = [
+                        job
+                        for previous_crystal in crystal_names[:crystal_index]
+                        for job in self.crystals[previous_crystal]
+                    ]
+                    jobs = previous_jobs + jobs
 
             available_jobs = [
                 job

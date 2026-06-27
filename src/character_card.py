@@ -23,8 +23,15 @@ class CharacterCard:
         self.image = self._load_image(self.sprite_path)
         self.job_labels: list[tk.Label] = []
         self.job_vars: list[tk.StringVar] = []
+        self.job_menus: list[tk.Menu] = []
         self.current_assignments: dict[str, str] = {}
         self.crystals = ["Wind", "Water", "Fire", "Earth"]
+        self.all_jobs = [
+            job for crystal in self.crystals for job in self.crystal_jobs.get(crystal, [])
+        ]
+        self.all_job_select = False
+        self.selected_jobs: set[str] | None = None
+        self.exclude_berserker = False
 
         self.frame = tk.Frame(
             parent,
@@ -107,7 +114,7 @@ class CharacterCard:
             self.job_labels.append(job_label)
 
             # Add dropdown menu for job selection
-            available_jobs = self.crystal_jobs.get(crystal, ["-"])
+            available_jobs = self._get_jobs_to_display(crystal, False, None, False)
             job_var = tk.StringVar(value="-")
             self.job_vars.append(job_var)
 
@@ -146,7 +153,55 @@ class CharacterCard:
             )
             dropdown_button.pack(side="right", padx=(4, 0))
             dropdown_button.menu = menu
+            self.job_menus.append(menu)
 
+
+    def _get_jobs_to_display(
+        self,
+        crystal: str,
+        all_job_select: bool,
+        selected_jobs: set[str] | None,
+        exclude_berserker: bool,
+    ) -> list[str]:
+        if all_job_select:
+            jobs = self.all_jobs
+        else:
+            jobs = self.crystal_jobs.get(crystal, ["-"])
+
+        if selected_jobs is not None:
+            jobs = [job for job in jobs if job in selected_jobs]
+
+        if exclude_berserker:
+            jobs = [job for job in jobs if job != "Berserker"]
+
+        return jobs or ["-"]
+
+    def update_job_dropdowns(
+        self,
+        all_job_select: bool,
+        selected_jobs: set[str] | None = None,
+        exclude_berserker: bool = False,
+    ) -> None:
+        self.all_job_select = all_job_select
+        self.selected_jobs = selected_jobs
+        self.exclude_berserker = exclude_berserker
+
+        for crystal_index, crystal in enumerate(self.crystals):
+            available_jobs = self._get_jobs_to_display(
+                crystal,
+                all_job_select,
+                selected_jobs,
+                exclude_berserker,
+            )
+            menu = self.job_menus[crystal_index]
+            menu.delete(0, tk.END)
+            for job in available_jobs:
+                menu.add_command(
+                    label=job,
+                    command=lambda selected=job, idx=crystal_index: self._on_dropdown_changed(
+                        idx, selected
+                    ),
+                )
 
     def _load_image(self, path: Path) -> tk.PhotoImage:
         if not path.exists():

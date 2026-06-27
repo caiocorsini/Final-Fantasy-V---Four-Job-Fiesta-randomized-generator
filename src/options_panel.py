@@ -1,4 +1,5 @@
 import tkinter as tk
+from typing import Callable
 
 from .constants import CRYSTALS
 
@@ -12,9 +13,11 @@ class OptionsPanel:
         self.exclude_berserker_var = tk.BooleanVar(value=False)
         self.allow_same_crystal_job_var = tk.BooleanVar(value=False)
         self.include_previous_crystals_var = tk.BooleanVar(value=False)
+        self.all_job_select_var = tk.BooleanVar(value=False)
         self.job_inclusion_vars: dict[str, tk.BooleanVar] = {}
         self.deep_customization_frame: tk.Frame | None = None
         self.deep_customization_container: tk.Frame | None = None
+        self.on_option_changed: Callable[[], None] | None = None
 
         self.frame = tk.Frame(parent, bg="#121b35", bd=1, relief="solid")
         self.frame.place_forget()
@@ -23,6 +26,7 @@ class OptionsPanel:
         self.exclude_berserker_var.trace_add(
             "write", self._sync_berserker_selection
         )
+        self.all_job_select_var.trace_add("write", self._notify_option_change)
 
     def _build_panel(self) -> None:
         title = tk.Label(
@@ -40,6 +44,9 @@ class OptionsPanel:
         )
         self._build_checkbutton(
             "Include previous crystal jobs", self.include_previous_crystals_var
+        )
+        self._build_checkbutton(
+            "All job select", self.all_job_select_var
         )
 
         deep_button = tk.Button(
@@ -181,11 +188,12 @@ class OptionsPanel:
         self.frame.place(relx=1.0, rely=0.0, x=-16, y=56, anchor="ne", width=260)
         self.options_open = True
 
-    def get_settings(self) -> tuple[bool, bool, bool, set[str]]:
+    def get_settings(self) -> tuple[bool, bool, bool, bool, set[str]]:
         return (
             self.exclude_berserker_var.get(),
             self.allow_same_crystal_job_var.get(),
             self.include_previous_crystals_var.get(),
+            self.all_job_select_var.get(),
             self.get_selected_jobs(),
         )
 
@@ -202,3 +210,7 @@ class OptionsPanel:
             self.exclude_berserker_var.set(
                 not self.job_inclusion_vars["Berserker"].get()
             )
+
+    def _notify_option_change(self, *_args: object) -> None:
+        if self.on_option_changed is not None:
+            self.on_option_changed()

@@ -188,6 +188,7 @@ class FF5JobFiestaApp(tk.Tk):
         load_seed_button.pack(side="left", padx=(10, 0))
 
         self.options_panel = OptionsPanel(self)
+        self.options_panel.on_option_changed = self._refresh_job_dropdowns
 
     def _clear_seed_placeholder(self, event: Any) -> None:
         if self.seed_var.get() == "Seed (optional)":
@@ -211,6 +212,22 @@ class FF5JobFiestaApp(tk.Tk):
     def _handle_escape(self, event: Any) -> None:
         if self.attributes("-fullscreen"):
             self.toggle_fullscreen()
+
+    def _refresh_job_dropdowns(self) -> None:
+        (
+            exclude_berserker,
+            allow_same_crystal_job,
+            include_previous_crystals,
+            all_job_select,
+            selected_jobs,
+        ) = self.options_panel.get_settings()
+
+        for card in self.cards.values():
+            card.update_job_dropdowns(
+                all_job_select=all_job_select,
+                selected_jobs=selected_jobs,
+                exclude_berserker=exclude_berserker,
+            )
 
     def toggle_galuf_krile_sprite(self) -> None:
         self.galuf_is_krile = not self.galuf_is_krile
@@ -254,6 +271,7 @@ class FF5JobFiestaApp(tk.Tk):
             exclude_berserker,
             allow_same_crystal_job,
             include_previous_crystals,
+            all_job_select,
             selected_jobs,
         ) = self.options_panel.get_settings()
         assignments = self.randomizer.randomize(
@@ -268,6 +286,11 @@ class FF5JobFiestaApp(tk.Tk):
         self.current_assignments = {char: assign.copy() for char, assign in assignments.items()}
 
         for character, card in self.cards.items():
+            card.update_job_dropdowns(
+                all_job_select=all_job_select,
+                selected_jobs=selected_jobs,
+                exclude_berserker=exclude_berserker,
+            )
             card.update_jobs(assignments[character])
 
         self.seed_info_label.configure(text=f"Share this seed: {seed}")
@@ -284,6 +307,7 @@ class FF5JobFiestaApp(tk.Tk):
             exclude_berserker,
             allow_same_crystal_job,
             include_previous_crystals,
+            all_job_select,
             selected_jobs,
         ) = self.options_panel.get_settings()
 
@@ -292,6 +316,7 @@ class FF5JobFiestaApp(tk.Tk):
             "exclude_berserker": exclude_berserker,
             "allow_same_crystal_job": allow_same_crystal_job,
             "include_previous_crystals": include_previous_crystals,
+            "all_job_select": all_job_select,
             "selected_jobs": sorted(selected_jobs),
         }
 
@@ -326,6 +351,7 @@ class FF5JobFiestaApp(tk.Tk):
                     "exclude_berserker",
                     "allow_same_crystal_job",
                     "include_previous_crystals",
+                    "all_job_select",
                     "selected_jobs",
                 }
                 if not required_keys.issubset(seed_config.keys()):
@@ -343,6 +369,9 @@ class FF5JobFiestaApp(tk.Tk):
                 )
                 self.options_panel.include_previous_crystals_var.set(
                     seed_config["include_previous_crystals"]
+                )
+                self.options_panel.all_job_select_var.set(
+                    seed_config["all_job_select"]
                 )
                 self.options_panel.set_selected_jobs(seed_config["selected_jobs"])
 
