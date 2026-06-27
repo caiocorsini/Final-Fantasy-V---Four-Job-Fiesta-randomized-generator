@@ -148,7 +148,7 @@ class OptionsPanel:
         label: str,
         variable: tk.BooleanVar,
         parent: tk.Widget | None = None,
-    ) -> None:
+    ) -> tk.Checkbutton:
         if parent is None:
             parent = self.frame
 
@@ -170,6 +170,7 @@ class OptionsPanel:
             check.pack(fill="x", padx=0, pady=2)
         else:
             check.pack(fill="x", side="left", padx=0, pady=2)
+        return check
 
     def toggle(self) -> None:
         if self.options_open:

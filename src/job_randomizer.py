@@ -47,7 +47,7 @@ class JobRandomizer:
                     "Adjust the Deep Customization selection."
                 )
 
-            if allow_same_crystal_job:
+            if allow_same_crystal_job or len(available_jobs) < len(self.characters):
                 assignments = [random.choice(available_jobs) for _ in self.characters]
             else:
                 assignments = random.sample(available_jobs, k=len(self.characters))
